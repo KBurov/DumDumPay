@@ -11,5 +11,14 @@ namespace DumDumPay.Utils
             
             return argumentValue;
         }
+
+        public static TEnum ArgumentHasCorrectEnumValue<TEnum>(TEnum argumentValue, string argumentName)
+            where TEnum : struct, Enum
+        {
+            if (!EnumerationValidator.IsDefined(argumentValue))
+                throw new ArgumentException($"{argumentName} contains incorrect value", argumentName);
+                    
+            return argumentValue;
+        }
     }
 }

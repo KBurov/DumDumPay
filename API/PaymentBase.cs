@@ -11,8 +11,7 @@ namespace DumDumPay.API
         public PaymentBase(string transactionId, PaymentStatus status)
         {
             TransactionId = Ensure.ArgumentNotNullOrEmpty(transactionId, nameof(transactionId));
-            // TODO: Add validation
-            Status = status;
+            Status = Ensure.ArgumentHasCorrectEnumValue(status, nameof(status));
         }
     }
 }
