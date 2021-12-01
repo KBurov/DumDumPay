@@ -1,4 +1,6 @@
-﻿namespace DumDumPay.API
+﻿using DumDumPay.Utils;
+
+namespace DumDumPay.API
 {
     public abstract class PaymentBase
     {
@@ -8,8 +10,7 @@
 
         public PaymentBase(string transactionId, PaymentStatus status)
         {
-            // TODO: Add validation
-            TransactionId = transactionId;
+            TransactionId = Ensure.ArgumentNotNullOrEmpty(transactionId, nameof(transactionId));
             // TODO: Add validation
             Status = status;
         }

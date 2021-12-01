@@ -1,4 +1,6 @@
-﻿namespace DumDumPay.API
+﻿using DumDumPay.Utils;
+
+namespace DumDumPay.API
 {
     public class PaymentState : PaymentBase
     {
@@ -20,11 +22,11 @@
         {
             Amount = amount;
             // TODO: Add validation for correct ISO code
-            Currency = currency;
+            Currency = Ensure.ArgumentNotNullOrEmpty(currency, nameof(currency));
             // TODO: Use Guid instead of string value
-            OrderId = orderId;
+            OrderId = Ensure.ArgumentNotNullOrEmpty(orderId, nameof(orderId));
             // TODO: Add validation
-            LastFourDigits = lastFourDigits;
+            LastFourDigits = Ensure.ArgumentNotNullOrEmpty(lastFourDigits, nameof(lastFourDigits));
         }
     }
 }

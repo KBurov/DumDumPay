@@ -1,4 +1,5 @@
 ﻿using System.Net.Http;
+using DumDumPay.Utils;
 
 namespace DumDumPay.API
 {
@@ -17,10 +18,9 @@ namespace DumDumPay.API
             string url,
             HttpMethod method) : base(transactionId, status)
         {
-            // TODO: Add validation
-            PaReq = paReq;
+            PaReq = Ensure.ArgumentNotNullOrEmpty(paReq, nameof(paReq));
             // TODO: Use Uri
-            Url = url;
+            Url = Ensure.ArgumentNotNullOrEmpty(url, nameof(url));
             // TODO: Add validation
             Method = method;
         }
