@@ -1,5 +1,7 @@
 ﻿using System;
 
+using DumDumPay.Utils;
+
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DumDumPay.DI
@@ -12,14 +14,19 @@ namespace DumDumPay.DI
 
         private static ServiceProvider _serviceProvider;
 
-        public static void Start()
+        public static void Start(string merchantId, string secretKey)
         {
+            Ensure.ArgumentNotNullOrEmpty(merchantId, nameof(merchantId));
+            Ensure.ArgumentNotNullOrEmpty(secretKey, nameof(secretKey));
+            
             if (_serviceProvider != null) return;
 
             lock (_rootScopeSync) {
                 if (_serviceProvider != null) return;
 
-                //
+                var services = new ServiceCollection();
+
+                _serviceProvider = services.BuildServiceProvider();
             }
         }
 
