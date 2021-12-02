@@ -4,6 +4,14 @@ namespace DumDumPay.Utils
 {
     public static class Ensure
     {
+        public static T ArgumentNotNull<T>(T argumentValue, string argumentName)
+        {
+            if (argumentValue == null)
+                throw new ArgumentNullException(argumentName, $"{argumentName} cannot be null");
+
+            return argumentValue;
+        }
+        
         public static string ArgumentNotNullOrEmpty(string argumentValue, string argumentName)
         {
             if (string.IsNullOrEmpty(argumentValue))

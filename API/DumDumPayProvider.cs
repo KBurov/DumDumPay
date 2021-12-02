@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
 
+using DumDumPay.API.Responses;
 using DumDumPay.Utils;
 
 namespace DumDumPay.API
@@ -12,11 +13,13 @@ namespace DumDumPay.API
         private const string CreateResource = "api/payment/create";
         private const string ConfirmResource = "api/payment/confirm";
         private const string StatusResource = "api/payment/{0}/status";
-        
+
+        private const string UnknownErrorMessage = "Unknown error during processing DumDumPay request/response";
+
         private string EndPoint { get; }
         private IDictionary<string, string> Headers { get; }
         private IHttpHelper HttpHelper { get; }
-        
+
         #region IDumDumPayProvider implementation
 
         public CreatePaymentResult Create(
@@ -46,11 +49,18 @@ namespace DumDumPay.API
                 };
                 var json = JsonSerializer.Serialize(postData);
 
-                var response = HttpHelper.Post(
+                var responseBody = HttpHelper.Post(
                                                uri,
                                                json,
                                                expectedResponseStatusCode: HttpStatusCode.OK,
                                                headers: Headers);
+                var createResponse = JsonSerializer.Deserialize<CreateResponse>(responseBody);
+
+                return new CreatePaymentResult(createResponse.GetTransactionId(),
+                                               createResponse.GetTransactionStatus(),
+                                               createResponse.GetPaReq(),
+                                               createResponse.GetUrl(),
+                                               createResponse.GetMethod());
             });
         }
 
@@ -63,6 +73,7 @@ namespace DumDumPay.API
         {
             //
         }
+
         #endregion
 
         public DumDumPayProvider(
@@ -73,13 +84,14 @@ namespace DumDumPay.API
             int timeoutInSeconds = 100)
         {
             if (timeoutInSeconds < 0)
-                throw new ArgumentException($"{nameof(timeoutInSeconds)} cannot be less then 0", nameof(timeoutInSeconds));
-            
+                throw new ArgumentException($"{nameof(timeoutInSeconds)} cannot be less then 0",
+                                            nameof(timeoutInSeconds));
+
             EndPoint = Ensure.ArgumentNotNullOrEmpty(endPoint, nameof(endPoint));
             Headers = new Dictionary<string, string>
             {
-                {"mechant-id", merchantId},
-                {"secret-key", secretKey}
+                { "mechant-id", merchantId },
+                { "secret-key", secretKey }
             };
             HttpHelper = httpHelper ?? new HttpHelper(timeoutInSeconds);
         }
@@ -90,11 +102,38 @@ namespace DumDumPay.API
                 return func();
             }
             catch (HttpException ex) {
-                //
+                switch (ex.HttpCode) {
+                    case HttpStatusCode.Forbidden:
+                    case HttpStatusCode.BadRequest:
+                        throw new
+                            DumDumPayException(GetExceptionMessage("Error during processing DumDumPay request", ex),
+                                               ex);
+                    case HttpStatusCode.Unauthorized:
+                        throw new DumDumPayException(GetExceptionMessage("Unauthorized access to DumDumPay API", ex),
+                                                     ex);
+                    default:
+                        throw new DumDumPayException(ex.HttpCode, $"{UnknownErrorMessage}: {ex}", ex);
+                }
             }
             catch (Exception ex) {
-                //
+                throw new DumDumPayException($"{UnknownErrorMessage}: {ex}", ex);
             }
+        }
+
+        private static string GetExceptionMessage(string messageHeader, HttpException ex)
+        {
+            try {
+                if (!string.IsNullOrEmpty(ex.ResponseBody)) {
+                    var errors = JsonSerializer.Deserialize<ErrorResponse>(ex.ResponseBody);
+
+                    return $"{messageHeader}: {errors}";
+                }
+            }
+            catch {
+                // ignored
+            }
+
+            return messageHeader;
         }
     }
 }
