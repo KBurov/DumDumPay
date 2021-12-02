@@ -12,6 +12,44 @@ namespace DumDumPay.Utils
         private int TimeoutInSeconds { get; }
 
         #region IHttpHelper implementation
+        /// <inheritdoc />
+        public string Get(
+            string url,
+            Encoding preferredEncoding = null,
+            string contentType = "application/json",
+            HttpStatusCode expectedResponseStatusCode = HttpStatusCode.OK,
+            IDictionary<string, string> headers = null)
+        {
+            if (string.IsNullOrEmpty(url))
+                throw new ArgumentException($"{nameof(url)} cannot be null or empty", nameof(url));
+
+            var uri = new Uri(url);
+
+            return Get(uri, preferredEncoding, contentType, expectedResponseStatusCode, headers);
+        }
+
+        /// <inheritdoc />
+        public string Get(
+            Uri uri,
+            Encoding preferredEncoding = null,
+            string contentType = "application/json",
+            HttpStatusCode expectedResponseStatusCode = HttpStatusCode.OK,
+            IDictionary<string, string> headers = null)
+        {
+            if (uri == null)
+                throw new ArgumentNullException(nameof(uri), $"{nameof(uri)} cannot be null");
+
+            var request = (HttpWebRequest) WebRequest.Create(uri);
+
+            request.Timeout = TimeoutInSeconds * 1000;
+            
+            if (headers?.Count > 0)
+                foreach (var kvp in headers)
+                    request.Headers.Add(kvp.Key, kvp.Value);
+
+            return InternalGet(request, preferredEncoding, contentType, expectedResponseStatusCode);
+        }
+
         public string Post(
             string url,
             string postData = null,
@@ -48,6 +86,15 @@ namespace DumDumPay.Utils
                     request.Headers.Add(kvp.Key, kvp.Value);
 
             return InternalPost(request, postData, preferredEncoding, contentType, expectedResponseStatusCode);
+        }
+
+        private static string InternalGet(WebRequest request, Encoding preferredEncoding, string contentType,
+                                          HttpStatusCode expectedResponseStatusCode)
+        {
+            request.Method = WebRequestMethods.Http.Get;
+            request.ContentType = contentType;
+
+            return InternalProcessReceiveStream(request, preferredEncoding, expectedResponseStatusCode);
         }
 
         private static string InternalPost(
@@ -139,7 +186,7 @@ namespace DumDumPay.Utils
             throw new HttpException(exceptionMessage);
         }
         #endregion
-        
+
         static HttpHelper()
         {
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;

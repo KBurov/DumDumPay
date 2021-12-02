@@ -1,21 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace DumDumPay.API.Responses
 {
     internal sealed class ErrorResponse
     {
-        public IList<Error> errors { get; set; }
+        [JsonPropertyName("errors")]
+        public IList<Error> Errors { get; set; }
 
         public override string ToString()
         {
-            if (errors == null || errors.Count == 0) return string.Empty;
+            if (Errors == null || Errors.Count == 0) return string.Empty;
 
             var builder = new StringBuilder();
 
-            foreach (var error in errors)
-                builder.Append($"{(builder.Length == 0 ? string.Empty : Environment.NewLine)}{error.type}: {error.message}");
+            foreach (var error in Errors)
+                builder.Append($"{(builder.Length == 0 ? string.Empty : Environment.NewLine)}{error.Type}: {error.Message}");
 
             return builder.ToString();
         }
@@ -23,7 +25,10 @@ namespace DumDumPay.API.Responses
 
     internal sealed class Error
     {
-        public string type { get; set; }
-        public string message { get; set; }
+        [JsonPropertyName("type")]
+        public string Type { get; set; }
+
+        [JsonPropertyName("message")]
+        public string Message { get; set; }
     }
 }

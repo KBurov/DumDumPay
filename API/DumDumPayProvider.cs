@@ -15,13 +15,13 @@ namespace DumDumPay.API
         private const string StatusResource = "api/payment/{0}/status";
 
         private const string UnknownErrorMessage = "Unknown error during processing DumDumPay request/response";
+        private const string DeserializationErrorMessage = "Cannot deserialize DumDumPay response";
 
         private string EndPoint { get; }
         private IDictionary<string, string> Headers { get; }
         private IHttpHelper HttpHelper { get; }
 
         #region IDumDumPayProvider implementation
-
         public CreatePaymentResult Create(
             string orderId,
             decimal amount,
@@ -49,31 +49,69 @@ namespace DumDumPay.API
                 };
                 var json = JsonSerializer.Serialize(postData);
 
-                var responseBody = HttpHelper.Post(
-                                               uri,
-                                               json,
-                                               expectedResponseStatusCode: HttpStatusCode.OK,
-                                               headers: Headers);
+                var responseBody = HttpHelper.Post(uri, json, headers: Headers);
                 var createResponse = JsonSerializer.Deserialize<CreateResponse>(responseBody);
 
-                return new CreatePaymentResult(createResponse.GetTransactionId(),
-                                               createResponse.GetTransactionStatus(),
-                                               createResponse.GetPaReq(),
-                                               createResponse.GetUrl(),
-                                               createResponse.GetMethod());
+                if (createResponse == null)
+                    throw new DumDumPayException(DeserializationErrorMessage);
+                        
+                return new CreatePaymentResult(createResponse.Result.TransactionId,
+                                               createResponse.Result.Status,
+                                               createResponse.Result.PaReq,
+                                               createResponse.Result.Url,
+                                               createResponse.Result.Method);
             });
         }
 
         public PaymentState Confirm(string transactionId, string paReq)
         {
-            //
+            return ProcessHttpRequest(() =>
+            {
+                var baseUri = new Uri(EndPoint);
+                var uri = new Uri(baseUri, ConfirmResource);
+                var postData = new
+                {
+                    transactionId,
+                    paRes = paReq
+                };
+                var json = JsonSerializer.Serialize(postData);
+                
+                var responseBody = HttpHelper.Post(uri, json, headers: Headers);
+                var paymentStateResponse = JsonSerializer.Deserialize<PaymentStateResponse>(responseBody);
+
+                if (paymentStateResponse == null)
+                    throw new DumDumPayException(DeserializationErrorMessage);
+
+                return new PaymentState(paymentStateResponse.Result.TransactionId,
+                                        paymentStateResponse.Result.Status,
+                                        paymentStateResponse.Result.Amount,
+                                        paymentStateResponse.Result.Currency,
+                                        paymentStateResponse.Result.OrderId,
+                                        paymentStateResponse.Result.LastFourDigits);
+            });
         }
 
         public PaymentState Status(string transactionId)
         {
-            //
-        }
+            return ProcessHttpRequest(() =>
+            {
+                var baseUri = new Uri(EndPoint);
+                var uri = new Uri(baseUri, string.Format(StatusResource, transactionId));
 
+                var responseBody = HttpHelper.Get(uri, headers: Headers);
+                var paymentStateResponse = JsonSerializer.Deserialize<PaymentStateResponse>(responseBody);
+
+                if (paymentStateResponse == null)
+                    throw new DumDumPayException(DeserializationErrorMessage);
+
+                return new PaymentState(paymentStateResponse.Result.TransactionId,
+                                        paymentStateResponse.Result.Status,
+                                        paymentStateResponse.Result.Amount,
+                                        paymentStateResponse.Result.Currency,
+                                        paymentStateResponse.Result.OrderId,
+                                        paymentStateResponse.Result.LastFourDigits);
+            });
+        }
         #endregion
 
         public DumDumPayProvider(
@@ -90,8 +128,8 @@ namespace DumDumPay.API
             EndPoint = Ensure.ArgumentNotNullOrEmpty(endPoint, nameof(endPoint));
             Headers = new Dictionary<string, string>
             {
-                { "mechant-id", merchantId },
-                { "secret-key", secretKey }
+                {"mechant-id", merchantId},
+                {"secret-key", secretKey}
             };
             HttpHelper = httpHelper ?? new HttpHelper(timeoutInSeconds);
         }

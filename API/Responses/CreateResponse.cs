@@ -1,57 +1,28 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net.Http;
-
-using DumDumPay.Utils;
+﻿using System.Net.Http;
+using System.Text.Json.Serialization;
 
 namespace DumDumPay.API.Responses
 {
     internal sealed class CreateResponse
     {
-        public Dictionary<string, string> result { get; set; }
+        [JsonPropertyName("result")]
+        public CreateResponseInternal Result { get; set; }
     }
 
-    internal static class CreateResponseExtensions
+    internal sealed class CreateResponseInternal : BaseResponse
     {
-        private const string ErrorMessageTemplate = "Payment creation response does not contain {0} value";
-        
-        public static string GetTransactionId(this CreateResponse response)
-        {
-            return GetValueByKey(response, "transactionId");
-        }
+        [JsonIgnore] private HttpMethod _method;
 
-        public static PaymentStatus GetTransactionStatus(this CreateResponse response)
-        {
-            var str = GetValueByKey(response, "transactionStatus");
+        [JsonPropertyName("paReq")]
+        public string PaReq { get; set; }
 
-            return str.ToPaymentStatus();
-        }
+        [JsonPropertyName("url")]
+        public string Url { get; set; }
 
-        public static string GetPaReq(this CreateResponse response)
-        {
-            return GetValueByKey(response, "paReq");
-        }
+        [JsonPropertyName("method")]
+        private string MethodInt { get; set; }
 
-        public static string GetUrl(this CreateResponse response)
-        {
-            return GetValueByKey(response, "url");
-        }
-
-        public static HttpMethod GetMethod(this CreateResponse response)
-        {
-            var str = GetValueByKey(response, "method");
-
-            return new HttpMethod(str);
-        }
-
-        private static string GetValueByKey(CreateResponse response, string key)
-        {
-            Ensure.ArgumentNotNull(response, nameof(response));
-            
-            if (response.result.ContainsKey(key))
-                return response.result[key];
-
-            throw new ArgumentException(string.Format(ErrorMessageTemplate, key));
-        }
+        [JsonIgnore]
+        public HttpMethod Method => _method ??= new HttpMethod(MethodInt);
     }
 }
